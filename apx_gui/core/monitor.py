@@ -20,6 +20,7 @@
 import json
 import requests
 import socket
+import os
 
 from typing import Any
 
@@ -31,6 +32,9 @@ from urllib3.connectionpool import HTTPConnectionPool
 from urllib3.util import Retry
 
 
+from urllib3.poolmanager import PoolManager
+from requests.adapters import HTTPAdapter
+
 class SocketConnection(HTTPConnection):
     def __init__(self, sock_addr):
         self.__sock_addr = sock_addr
@@ -40,7 +44,6 @@ class SocketConnection(HTTPConnection):
         self.sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         self.sock.connect(self.__sock_addr)
 
-
 class SocketConnectionPool(HTTPConnectionPool):
     def __init__(self, sock_addr: str):
         self.__sock_addr = sock_addr
@@ -49,7 +52,16 @@ class SocketConnectionPool(HTTPConnectionPool):
     def _new_conn(self):
         return SocketConnection(self.__sock_addr)
 
+class SocketPoolManager(PoolManager):
+    def __init__(self, sock_addr):
+        self.sock_addr = sock_addr
+        super().__init__()
 
+    def _new_pool(self, scheme, host, port, request_context=None):
+        # This forces urllib3 to use our Socket Pool instead of a network pool
+        return SocketConnectionPool(self.sock_addr)
+
+# 4. The Adapter: Overwrites the poolmanager
 class SocketAdapter(HTTPAdapter):
     def __init__(
         self,
@@ -61,14 +73,15 @@ class SocketAdapter(HTTPAdapter):
     ) -> None:
         self.__sock_addr = sock_addr
         super().__init__(pool_connections, pool_maxsize, max_retries, pool_block)
+        self.poolmanager = SocketPoolManager(self.__sock_addr)
 
     def get_connection(self, url, proxies=None):
-        return SocketConnectionPool(self.__sock_addr)
+            return SocketConnectionPool(self.__sock_addr)
 
 
 class Monitor:
-    __socket_path = "/run/user/1001/podman/podman.sock"
-    __last_read = ""
+    __socket_path = f"{os.environ.get('XDG_RUNTIME_DIR')}/podman/podman.sock"
+    __last_read = "2026-01-19T04:53:28"
 
     watch_events = ["start", "die"]
 
@@ -101,7 +114,7 @@ class Monitor:
 
         if Monitor.__last_read == "":
             Monitor.__last_read = Monitor.__now_iso()
-
+        
         session = requests.Session()
         session.mount("http://localhost/", SocketAdapter(socket_path))
         try:
