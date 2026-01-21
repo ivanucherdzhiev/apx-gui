@@ -30,7 +30,7 @@ from podman import PodmanClient
 logger = logging.getLogger(__name__)
 
 class Monitor:
-    __last_read = datetime.now(UTC)
+    __last_read = datetime.now(UTC).replace(tzinfo=None)
     runtime_dir = os.environ.get('XDG_RUNTIME_DIR')
     if not runtime_dir:
         runtime_dir = f"/run/user/{os.getuid()}"
@@ -56,7 +56,7 @@ class Monitor:
         else:
             podman_uri = f"unix://{Monitor.__socket_path}"
         
-        now = datetime.now(UTC)
+        now = datetime.now(UTC).replace(tzinfo=None)
         
         try:
             with PodmanClient(base_url=podman_uri) as  client:
