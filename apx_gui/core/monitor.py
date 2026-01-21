@@ -69,11 +69,11 @@ class Monitor:
                 client.close()
                 events_list = list(events)
                 if len(events_list) > 0:
-                    logger.info(f"DEBUG: SUCCESS! Found {len(events_list)} events.")
+                    logger.debug(f"DEBUG: SUCCESS! Found {len(events_list)} events.")
                     for e in events_list:
-                        logger.info(f"  - Event: {e.get('Action')} | Type: {e.get('Type')} | Status: {e.get('status')}")
+                        logger.debug(f"  - Event: {e.get('Action')} | Type: {e.get('Type')} | Status: {e.get('status')}")
                 else:
-                    logger.info("DEBUG: Window was empty. Try starting/stopping a container now.")
+                    logger.debug("DEBUG: Window was empty. Try starting/stopping a container now.")
                     
                 Monitor.__last_read = now
                 return events_list
